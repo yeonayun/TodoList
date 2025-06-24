@@ -3,8 +3,14 @@
     {
       "id": 1750724524355,
       "text": "node.js 수행평가 준비하깃!!",
+      "completed": true,
+      "important": true
+    },
+    {
+      "id": 1750725187328,
+      "text": "노드 수행평가!!",
       "completed": false,
-      "important": false
+      "important": true
     }
   ]
 }
