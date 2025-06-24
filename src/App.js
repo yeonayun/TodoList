@@ -1,60 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Star, Trash2 } from 'lucide-react';
+import * as api from './api'; // API 모듈 import
 import './App.css';
-import { login, register, logout, getCurrentUser, isAuthenticated } from './api/auth';
 
-const API_URL = 'http://localhost:5000/todos';
-
-const fetchTodos = async () => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(API_URL, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!res.ok) throw new Error('Failed to fetch todos');
-  return res.json();
-};
-
-const addTodo = async (text) => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) throw new Error('Failed to add todo');
-  return res.json();
-};
-
-const updateTodo = async (id, updatedFields) => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'PUT',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(updatedFields),
-  });
-  if (!res.ok) throw new Error('Failed to update todo');
-  return res.json();
-};
-
-const deleteTodo = async (id) => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!res.ok) throw new Error('Failed to delete todo');
-};
-
-// 로그인 컴포넌트
+// ==================== LoginForm ====================
 const LoginForm = ({ onLogin, switchToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,53 +14,46 @@ const LoginForm = ({ onLogin, switchToRegister }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
-      const response = await login({ email, password });
-      onLogin(response.user);
+      if (!email || !password) throw new Error('이메일과 비밀번호를 입력해주세요');
+
+      // API 모듈 사용
+      const { user } = await api.login({ email, password });
+      onLogin(user);
     } catch (err) {
-      setError(err);
+      setError(err.response?.data?.error || err.message || '로그인 실패');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <div className="todo-box">
-        <h1>🔐 로그인</h1>
-        {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '12px' }}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력하세요"
-              required
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              required
-              style={{ width: '100%', padding: '8px' }}
-            />
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ width: '100%', padding: '10px', marginBottom: '12px' }}
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
-        <button 
-          onClick={switchToRegister}
-          style={{ width: '100%', padding: '10px', backgroundColor: '#f0f0f0' }}
+    <div className="auth-container">
+      <div className="auth-form">
+        <h1 className="auth-title">🔐 로그인</h1>
+        {error && <div className="auth-error">{error}</div>}
+        <input
+          type="email"
+          placeholder="이메일을 입력하세요"
+          className="auth-input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="비밀번호를 입력하세요"
+          className="auth-input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="auth-button auth-button-primary"
         >
+          {loading ? '로그인 중...' : '로그인'}
+        </button>
+        <button onClick={switchToRegister} className="auth-button auth-button-secondary">
           회원가입하기
         </button>
       </div>
@@ -119,7 +61,7 @@ const LoginForm = ({ onLogin, switchToRegister }) => {
   );
 };
 
-// 회원가입 컴포넌트
+// ==================== RegisterForm ====================
 const RegisterForm = ({ onRegister, switchToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -131,61 +73,53 @@ const RegisterForm = ({ onRegister, switchToLogin }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
-      const response = await register({ email, password, name });
-      onRegister(response.user);
+      if (!email || !password || !name) throw new Error('모든 필드를 입력해주세요');
+
+      // API 모듈 사용
+      const { user } = await api.register({ email, password, name });
+      onRegister(user);
     } catch (err) {
-      setError(err);
+      setError(err.response?.data?.error || err.message || '회원가입 실패');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <div className="todo-box">
-        <h1>📝 회원가입</h1>
-        {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '12px' }}>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="이름을 입력하세요"
-              required
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
-            />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력하세요"
-              required
-              style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              required
-              style={{ width: '100%', padding: '8px' }}
-            />
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ width: '100%', padding: '10px', marginBottom: '12px' }}
-          >
-            {loading ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
-        <button 
-          onClick={switchToLogin}
-          style={{ width: '100%', padding: '10px', backgroundColor: '#f0f0f0' }}
+    <div className="auth-container">
+      <div className="auth-form">
+        <h1 className="auth-title">📝 회원가입</h1>
+        {error && <div className="auth-error">{error}</div>}
+        <input
+          type="text"
+          placeholder="이름을 입력하세요"
+          className="auth-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          type="email"
+          placeholder="이메일을 입력하세요"
+          className="auth-input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="비밀번호를 입력하세요"
+          className="auth-input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="auth-button auth-button-primary"
         >
+          {loading ? '가입 중...' : '회원가입'}
+        </button>
+        <button onClick={switchToLogin} className="auth-button auth-button-secondary">
           로그인하기
         </button>
       </div>
@@ -193,222 +127,453 @@ const RegisterForm = ({ onRegister, switchToLogin }) => {
   );
 };
 
+// ==================== CalendarView ====================
+const CalendarView = ({
+  todos,
+  selectedDate,
+  onDateSelect,
+  onAddTodo,
+  onUpdateTodo,
+  onDeleteTodo
+}) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTodoText, setNewTodoText] = useState('');
+  const [editingTodo, setEditingTodo] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  const today = new Date();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const firstDayWeekday = firstDayOfMonth.getDay();
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  const monthNames = [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월'
+  ];
+
+  const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const handleDateClick = (day) => {
+    const clickedDate = new Date(year, month, day);
+    onDateSelect(clickedDate);
+  };
+
+  const formatDateKey = (date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const getTodosForDate = (day) => {
+    const date = new Date(year, month, day);
+    const dateKey = formatDateKey(date);
+    return todos.filter(todo => {
+      // date 필드가 있으면 사용, 없으면 createdAt 사용
+      const todoDate = todo.date || (todo.createdAt ? todo.createdAt.split('T')[0] : null);
+      return todoDate === dateKey;
+    });
+  };
+
+  const isToday = (day) => {
+    return today.getFullYear() === year &&
+           today.getMonth() === month &&
+           today.getDate() === day;
+  };
+
+  const isSelected = (day) => {
+    if (!selectedDate) return false;
+    return selectedDate.getFullYear() === year &&
+           selectedDate.getMonth() === month &&
+           selectedDate.getDate() === day;
+  };
+
+  const handleAddTodo = async () => {
+    if (!newTodoText.trim() || !selectedDate) return;
+
+    try {
+      const dateKey = formatDateKey(selectedDate);
+      // API 모듈의 addTodo 함수 사용
+      await onAddTodo(newTodoText, dateKey);
+      
+      setNewTodoText('');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('할일 추가 에러:', error);
+      alert('할일 추가 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleEditTodo = (todo) => {
+    setEditingTodo(todo);
+    setEditText(todo.text);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editText.trim()) return;
+    await onUpdateTodo(editingTodo.id, { text: editText });
+    setEditingTodo(null);
+    setEditText('');
+  };
+
+  const selectedDateTodos = selectedDate ? getTodosForDate(selectedDate.getDate()) : [];
+
+  const renderCalendarDays = () => {
+    const days = [];
+
+    // 빈 칸 추가
+    for (let i = 0; i < firstDayWeekday; i++) {
+      days.push(<div key={`empty-${i}`} className="calendar-day"></div>);
+    }
+
+    // 실제 날짜들
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayTodos = getTodosForDate(day);
+      const completedCount = dayTodos.filter(todo => todo.completed).length;
+      const totalCount = dayTodos.length;
+
+      let dayClasses = "calendar-day";
+
+      if (isToday(day)) {
+        dayClasses += " today";
+      } else if (isSelected(day)) {
+        dayClasses += " selected";
+      }
+
+      days.push(
+        <div
+          key={day}
+          onClick={() => handleDateClick(day)}
+          className={dayClasses}
+        >
+          <div className="calendar-day-number">{day}</div>
+          {totalCount > 0 && (
+            <div className="calendar-day-todos">
+              <div className="calendar-day-stats">
+                {completedCount}/{totalCount}
+              </div>
+              <div>
+                {dayTodos.slice(0, 2).map(todo => (
+                  <div
+                    key={todo.id}
+                    className={`calendar-day-todo-item ${todo.completed ? 'completed' : 'pending'} ${todo.important ? 'important' : ''}`}
+                  >
+                    {todo.important && '★ '}{todo.text}
+                  </div>
+                ))}
+                {dayTodos.length > 2 && (
+                  <div className="calendar-day-more">+{dayTodos.length - 2}</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return days;
+  };
+
+  return (
+    <div className="calendar-container">
+      {/* 캘린더 */}
+      <div className="calendar-main">
+        {/* 헤더 */}
+        <div className="calendar-header">
+          <button
+            onClick={handlePrevMonth}
+            className="calendar-nav-button"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h2 className="calendar-month-title">
+            {year}년 {monthNames[month]}
+          </h2>
+          <button
+            onClick={handleNextMonth}
+            className="calendar-nav-button"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* 요일 헤더 */}
+        <div className="calendar-weekdays">
+          {weekDays.map(day => (
+            <div key={day} className="calendar-weekday">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* 날짜 그리드 */}
+        <div className="calendar-grid">
+          {renderCalendarDays()}
+        </div>
+      </div>
+
+      {/* 사이드바 */}
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <h3 className="sidebar-title">
+            <Calendar size={20} />
+            {selectedDate ?
+              `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일` :
+              '날짜를 선택하세요'
+            }
+          </h3>
+          {selectedDate && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="add-todo-button"
+            >
+              <Plus size={16} />
+              할일 추가
+            </button>
+          )}
+        </div>
+
+        <div className="sidebar-content">
+          {selectedDate && selectedDateTodos.length === 0 && (
+            <div className="no-todos">
+              할일이 없습니다
+            </div>
+          )}
+
+          {selectedDateTodos.map(todo => (
+            <div key={todo.id} className="todo-item">
+              {editingTodo?.id === todo.id ? (
+                <div className="todo-edit-form">
+                  <input
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="todo-edit-input"
+                  />
+                  <div className="todo-edit-actions">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="todo-edit-button save"
+                    >
+                      저장
+                    </button>
+                    <button
+                      onClick={() => setEditingTodo(null)}
+                      className="todo-edit-button cancel"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="todo-item-header">
+                    <button
+                      onClick={() => onUpdateTodo(todo.id, { important: !todo.important })}
+                      className={`star-button ${todo.important ? '' : 'inactive'}`}
+                    >
+                      <Star fill={todo.important ? "currentColor" : "none"} size={16} />
+                    </button>
+                    <span
+                      onClick={() => onUpdateTodo(todo.id, { completed: !todo.completed })}
+                      className={`todo-text ${todo.completed ? 'completed' : ''}`}
+                    >
+                      {todo.text}
+                    </span>
+                  </div>
+                  <div className="todo-actions">
+                    <button
+                      onClick={() => handleEditTodo(todo)}
+                      className="todo-action-button edit"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => onDeleteTodo(todo.id)}
+                      className="todo-action-button delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 할일 추가 모달 */}
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3 className="modal-title">할일 추가</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="modal-close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <input
+              value={newTodoText}
+              onChange={(e) => setNewTodoText(e.target.value)}
+              placeholder="할일을 입력하세요"
+              className="modal-input"
+              onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
+            />
+            <div className="modal-actions">
+              <button
+                onClick={handleAddTodo}
+                className="modal-button primary"
+              >
+                추가
+              </button>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="modal-button secondary"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== Main App ====================
 function App() {
   const [todos, setTodos] = useState([]);
-  const [newText, setNewText] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (isAuthenticated()) {
-        try {
-          const currentUser = await getCurrentUser();
-          setUser(currentUser);
-          fetchTodos()
-            .then(setTodos)
-            .catch(err => setError(err.message));
-        } catch (err) {
-          logout();
-        }
-      }
-      setLoading(false);
-    };
-
-    checkAuth();
-  }, []);
-
+  // 로그인 성공 처리
   const handleLogin = (userData) => {
     setUser(userData);
-    fetchTodos()
-      .then(setTodos)
-      .catch(err => setError(err.message));
   };
 
+  // 회원가입 성공 처리
   const handleRegister = (userData) => {
     setUser(userData);
-    setTodos([]);
   };
 
+  // 로그아웃 처리
   const handleLogout = () => {
-    logout();
+    api.logout();
     setUser(null);
     setTodos([]);
-    setError(null);
   };
 
-  const handleAdd = async () => {
-    if (!newText.trim()) return;
+  // 할 일 리스트 서버에서 불러오기
+  useEffect(() => {
+    if (!user) return;
+
+    const loadTodos = async () => {
+      setLoading(true);
+      try {
+        const todosData = await api.fetchTodos();
+        setTodos(todosData);
+      } catch (err) {
+        console.error('할일 목록 불러오기 에러:', err);
+        alert('할일 목록을 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTodos();
+  }, [user]);
+
+  // 할 일 추가 (API 모듈 사용)
+  const handleAddTodo = async (text, date) => {
     try {
-      const newTodo = await addTodo(newText);
-      setTodos([...todos, newTodo]);
-      setNewText('');
+      const newTodo = await api.addTodo(text, date);
+      setTodos((prev) => [...prev, newTodo]);
+      return newTodo;
     } catch (err) {
-      setError(err.message);
+      console.error('할일 추가 에러:', err);
+      alert('할일 추가 중 오류가 발생했습니다.');
+      throw err;
     }
   };
 
-  const handleToggle = async (id, completed) => {
+  // 할 일 수정 (API 모듈 사용)
+  const handleUpdateTodo = async (id, updatedFields) => {
     try {
-      const updated = await updateTodo(id, { completed: !completed });
-      setTodos(todos.map(todo => (todo.id === id ? updated : todo)));
+      const updatedTodo = await api.updateTodo(id, updatedFields);
+      setTodos((prev) =>
+        prev.map((todo) => (todo.id === id ? updatedTodo : todo))
+      );
     } catch (err) {
-      setError(err.message);
+      console.error('할일 수정 에러:', err);
+      alert('할일 수정 중 오류가 발생했습니다.');
     }
   };
 
-  const handleToggleImportant = async (id, important) => {
+  // 할 일 삭제 (API 모듈 사용)
+  const handleDeleteTodo = async (id) => {
     try {
-      const updated = await updateTodo(id, { important: !important });
-      setTodos(todos.map(todo => (todo.id === id ? updated : todo)));
+      await api.deleteTodo(id);
+      setTodos((prev) => prev.filter((todo) => todo.id !== id));
     } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await deleteTodo(id);
-      setTodos(todos.filter(todo => todo.id !== id));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleEdit = (id, currentText) => {
-    setEditingId(id);
-    setEditText(currentText);
-  };
-
-  const handleEditSubmit = async (id) => {
-    if (!editText.trim()) return;
-    try {
-      const updated = await updateTodo(id, { text: editText });
-      setTodos(todos.map(todo => (todo.id === id ? updated : todo)));
-      setEditingId(null);
-      setEditText('');
-    } catch (err) {
-      setError(err.message);
+      console.error('할일 삭제 에러:', err);
+      alert('할일 삭제 중 오류가 발생했습니다.');
     }
   };
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="todo-box">
-          <div>로딩 중...</div>
-        </div>
+      <div className="loading-container">
+        <div className="loading-content">로딩 중...</div>
       </div>
     );
   }
 
-  // 로그인되지 않은 경우
   if (!user) {
     return isLogin ? (
-      <LoginForm 
-        onLogin={handleLogin} 
+      <LoginForm
+        onLogin={handleLogin}
         switchToRegister={() => setIsLogin(false)}
       />
     ) : (
-      <RegisterForm 
-        onRegister={handleRegister} 
+      <RegisterForm
+        onRegister={handleRegister}
         switchToLogin={() => setIsLogin(true)}
       />
     );
   }
 
-  // 로그인된 경우 - 기존 투두 앱
   return (
-    <div className="container">
-      <div className="todo-box">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1>📝 {user.name}님의 ToDo List</h1>
-          <button 
-            onClick={handleLogout}
-            style={{ padding: '8px 16px', backgroundColor: '#ff6b6b', color: 'white', border: 'none', borderRadius: '4px' }}
-          >
+    <div className="app-container">
+      <header className="app-header">
+        <div>
+          <span>{user.name} 님 환영합니다.</span>
+          <button onClick={handleLogout} className="logout-button">
             로그아웃
           </button>
         </div>
-        
-        {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-        
-        <div style={{ display: 'flex', marginBottom: '12px' }}>
-          <input
-            value={newText}
-            onChange={e => setNewText(e.target.value)}
-            placeholder="할 일을 입력하세요"
-          />
-          <button
-            onClick={handleAdd}
-            style={{ height: '40px', padding: '0 12px', whiteSpace: 'nowrap', writingMode: 'horizontal-tb' }}
-          >
-            추가
-          </button>
-        </div>
-
-        <ul style={{ padding: 0, listStyle: 'none' }}>
-          {todos.map(todo => (
-            <li
-              key={todo.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '8px',
-                padding: '8px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: '#fff',
-              }}
-            >
-              {editingId === todo.id ? (
-                <>
-                  <input
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    style={{ flex: 1, marginRight: '8px' }}
-                  />
-                  <button onClick={() => handleEditSubmit(todo.id)}>저장</button>
-                  <button onClick={() => setEditingId(null)}>취소</button>
-                </>
-              ) : (
-                <>
-                  <span
-                    onClick={() => handleToggleImportant(todo.id, todo.important)}
-                    style={{
-                      cursor: 'pointer',
-                      color: todo.important ? 'gold' : 'gray',
-                      fontSize: '20px',
-                      marginRight: '8px',
-                      userSelect: 'none',
-                    }}
-                    title={todo.important ? '중요 표시됨' : '중요하지 않음'}
-                  >
-                    {todo.important ? '★' : '☆'}
-                  </span>
-
-                  <span
-                    onClick={() => handleToggle(todo.id, todo.completed)}
-                    style={{
-                      textDecoration: todo.completed ? 'line-through' : 'none',
-                      flex: 1,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {todo.text}
-                  </span>
-                  <button onClick={() => handleEdit(todo.id, todo.text)}>수정</button>
-                  <button onClick={() => handleDelete(todo.id)}>삭제</button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+      </header>
+      <CalendarView
+        todos={todos}
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        onAddTodo={handleAddTodo}
+        onUpdateTodo={handleUpdateTodo}
+        onDeleteTodo={handleDeleteTodo}
+      />
     </div>
   );
 }
